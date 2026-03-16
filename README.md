@@ -1,55 +1,134 @@
-# predictive-modeling-pipeline
-7 classification models on 100K+ records with 10-fold cross-validation
-# Predictive Modeling Pipeline
+# Flight Delay Prediction
 
-> End-to-end analytics pipeline on a 100K+ record dataset — 7 classification models evaluated with 10-fold cross-validation, achieving ~77% accuracy.
+> A comprehensive end-to-end machine learning pipeline to classify U.S. domestic flight delays using 12 classification models — achieving 77% accuracy with Naive Bayes as the best-performing model.
 
 ![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
-![Tools](https://img.shields.io/badge/Tools-Python%20%7C%20R%20%7C%20caret-276DC3)
+![Language](https://img.shields.io/badge/Language-R-276DC3)
+![Dataset](https://img.shields.io/badge/Dataset-BTS%20On--Time%20Performance-orange)
+![Models](https://img.shields.io/badge/Models-12%20Classifiers-blue)
 
 ---
 
 ## 📌 Project Overview
 
-This project demonstrates a full analytics pipeline from business objective definition to model evaluation. Working with a dataset of over 100,000 records, the goal was to translate business KPIs into a measurable classification problem, engineer predictive features, and identify the best-performing model through rigorous cross-validation.
+Flight delays pose significant operational and financial challenges across the aviation industry. This project builds a predictive classification system to determine whether a U.S. domestic flight will experience a departure delay of **15 minutes or more** (`DepDel15`), using a large-scale dataset from the **U.S. Bureau of Transportation Statistics (BTS) On-Time Performance** database.
+
+> **Co-authored with:** Hariharan Jothimani
 
 ---
 
 ## 🎯 Objectives
 
-- Translate business objectives into measurable **KPIs and analytical workflows**
-- Design and engineer **20+ predictive features** from raw data
-- Build and compare **7 classification models** using best practices
-- Manage deliverables using **Agile/Jira** sprint structure
-- Document findings clearly for both technical and non-technical audiences
+- Build a full preprocessing pipeline for a high-dimensional, heterogeneous aviation dataset
+- Train and compare **12 classification models** across linear, discriminant, penalized, kernel-based, and probabilistic families
+- Use **10-fold cross-validation** with Cohen's Kappa as the primary metric (to handle class imbalance)
+- Identify the best-performing model and analyze its key predictors
 
 ---
 
-## 🤖 Models Evaluated
+## 📊 Dataset
 
-| Model | Accuracy | Notes |
+- **Source:** U.S. Bureau of Transportation Statistics — On-Time Performance Database
+- **Scope:** Filtered to top 5 busiest origin airports for computational feasibility
+- **Training observations:** 155,945
+- **Target variable:** `DepDel15` — Binary (Delay / NoDelay)
+- **Predictors:** 14–18 features after preprocessing
+
+### Key Features Used
+
+| Type | Variables |
+|---|---|
+| Categorical | Airline, Origin, Dest, Quarter, Month, DayOfWeek |
+| Numerical | AirTime, CRSElapsedTime, Distance, CRSDepTime |
+| Engineered | CRSDepTime_sin, CRSDepTime_cos (cyclic encoding), DepTimeBlk_num |
+| Binary | Cancelled, Diverted |
+
+---
+
+## ⚙️ Preprocessing Pipeline
+
+1. **Sample size selection** — Filtered to top 5 busiest airports to manage scale
+2. **Variable removal** — Dropped 40+ redundant/leakage columns (IDs, timestamps, arrival fields)
+3. **Cyclic time encoding** — Converted `CRSDepTime` to sine/cosine components to preserve time continuity
+4. **Missing value handling** — Complete-case removal via `na.omit()`
+5. **Dummy encoding** — Quarter, Month, DayOfWeek expanded to binary indicators
+6. **Mixed effect encoding** — `step_lencode_mixed()` for high-cardinality categoricals (Airline, Origin, Dest)
+7. **Near-zero variance removal** — Used `nearZeroVar()` to eliminate low-signal predictors
+8. **Box-Cox transformation** — Applied to AirTime, CRSElapsedTime, Distance to reduce skewness
+9. **Correlation removal** — Removed predictors with correlation > 0.90 for model families requiring it
+10. **Train/test split** — Stratified 80/20 split using `createDataPartition()`
+
+---
+
+## 🤖 Models & Results
+
+Each model family received a tailored version of the preprocessed dataset based on its assumptions:
+
+| Preprocessing Group | Models |
+|---|---|
+| Box-Cox + Correlation Removal | Logistic Regression, LDA, QDA, MDA |
+| Box-Cox Only | PLS-DA, Penalized (glmnet), RDA |
+| Correlation Removal Only | Neural Network, Naive Bayes, FDA |
+| No Transformation | SVM (Radial), KNN |
+
+### Training Performance (10-fold CV)
+
+| Model | Training Kappa | Training Accuracy | Best Parameters |
+|---|---|---|---|
+| **Naive Bayes** ⭐ | **0.1837** | **0.7924** | fL=0, usekernel=FALSE, adjust=0.5 |
+| QDA | 0.1775 | 0.7849 | — |
+| RDA | 0.1706 | 0.7991 | gamma=1, lambda=0.75 |
+| FDA | 0.1560 | 0.8001 | degree=2, nprune=5 |
+| KNN | 0.1503 | 0.7996 | k=9 |
+| Neural Network | 0.1341 | 0.8013 | size=5, decay=0.01 |
+| MDA | 0.1304 | 0.7991 | subclasses=4 |
+| SVM Radial | 0.1225 | 0.8010 | sigma=0.018, C=0.5 |
+| LDA | 0.0908 | 0.7991 | — |
+| Logistic | 0.0670 | 0.7976 | — |
+| Penalized | 0.0635 | 0.7973 | alpha=0.25, lambda=0.001 |
+| PLS-DA | 0.0111 | 0.7935 | ncomp=3 |
+
+### Test Set Evaluation (Top 2 Models)
+
+| Model | Test Kappa | Test Accuracy |
 |---|---|---|
-| Naive Bayes | ~77% | Best generalization performance |
-| Logistic Regression | — | Baseline benchmark |
-| Decision Tree | — | Interpretability focus |
-| Random Forest | — | Ensemble approach |
-| KNN | — | Distance-based |
-| SVM | — | High-dimensional performance |
-| LDA | — | Linear discriminant |
+| **Naive Bayes** ⭐ | **0.1745** | 0.7719 |
+| QDA | 0.1679 | 0.7822 |
 
-> All models evaluated using **10-fold cross-validation** to prevent overfitting.
+> **Naive Bayes** was selected as the final model based on its higher Test Kappa — a more reliable metric under class imbalance than accuracy alone.
 
 ---
 
-## 🔧 Pipeline Steps
+## 🏆 Best Model — Naive Bayes
 
-1. **Business Understanding** — Defined KPIs and success metrics aligned to business goals
-2. **Data Ingestion** — Loaded and explored 100K+ record dataset
-3. **Data Preprocessing** — Handled missing values, outliers, encoding
-4. **Feature Engineering** — Created 20+ features from raw attributes
-5. **Model Training** — Trained 7 classifiers with consistent preprocessing
-6. **Evaluation** — 10-fold CV; compared accuracy, precision, recall, F1
-7. **Documentation** — Sprint-tracked deliverables via Jira
+### Confusion Matrix Summary
+
+| Metric | Value |
+|---|---|
+| Accuracy | 77.19% |
+| Kappa | 0.1745 |
+| Sensitivity (NoDelay) | 0.9129 |
+| Specificity (Delay) | 0.2337 |
+| Balanced Accuracy | 0.5733 |
+
+The model excels at identifying on-time flights (91% sensitivity) but faces challenges detecting actual delays — a known difficulty in class-imbalanced aviation datasets.
+
+### Top 10 Predictors (Variable Importance)
+
+| Rank | Predictor | Importance |
+|---|---|---|
+| 1 | Airline | 10.9% |
+| 2 | CRSDepTime_sin | 10.6% |
+| 3 | DepTimeBlk_num | 10.6% |
+| 4 | Dest | 10.4% |
+| 5 | Origin | 10.2% |
+| 6 | CRSDepTime_cos | 9.8% |
+| 7 | CRSElapsedTime | 9.8% |
+| 8 | DayOfWeek_X5 | 9.4% |
+| 9 | DayOfWeek_X2 | 9.2% |
+| 10 | DayOfWeek_X4 | 9.2% |
+
+Airline carrier, departure time, and route (origin/destination) were the strongest delay predictors — consistent with known aviation delay patterns.
 
 ---
 
@@ -57,41 +136,63 @@ This project demonstrates a full analytics pipeline from business objective defi
 
 | Category | Tools |
 |---|---|
-| Languages | Python, R |
-| ML Libraries | caret, MASS, glmnet |
-| Data Processing | Pandas, NumPy, dplyr |
-| Project Management | Jira |
-| Environment | Jupyter Notebook |
+| Language | R |
+| ML Framework | caret |
+| Libraries | MASS, mda, klaR, nnet, glmnet, kernlab, tidymodels, embed, recipes |
+| Data Processing | dplyr, tidymodels, recipe steps |
+| Validation | 10-fold cross-validation, Cohen's Kappa |
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-predictive-modeling-pipeline/
-├── data/
-│   └── dataset_sample.csv
-├── notebooks/
-│   ├── 01_eda.ipynb
-│   ├── 02_feature_engineering.ipynb
-│   └── 03_model_evaluation.ipynb
-├── models/
-│   └── model_comparison_results.csv
-├── reports/
-│   └── final_report.pdf
-└── README.md
+flight-delay-prediction/
+├── Final_R_code.R          # Complete R code for preprocessing + all 12 models
+├── FINAL_REPORT.pdf        # Full project report with analysis and results
+├── README.md
+└── data/
+    └── dataset_note.md     # Instructions to download BTS dataset
 ```
 
 ---
 
-## 📈 Key Results
+## 🚀 How to Run
 
-- **Naive Bayes** achieved the strongest generalization with ~77% accuracy across folds
-- Feature engineering contributed meaningfully to model lift over baseline
-- Sprint-based workflow ensured structured delivery and clear documentation at each stage
+```r
+# Install required packages
+install.packages(c("caret", "dplyr", "tidymodels", "embed", "MASS",
+                   "mda", "klaR", "nnet", "glmnet", "kernlab", "recipes"))
+
+# Update the dataset path in Final_R_code.R
+path <- "your/path/to/dataset.csv"
+
+# Run the full script
+source("Final_R_code.R")
+```
+
+> The dataset is sourced from the [BTS On-Time Performance Database](https://www.transtats.bts.gov/Tables.asp?QO_VQ=EFD). Download and update the path before running.
 
 ---
 
-## 👩‍💻 Author
+## 🔮 Future Improvements
 
-**Vaishnavi Perka** — [LinkedIn](https://www.linkedin.com/in/vaishnavi-perka) · [Portfolio](https://vaishnaviperka.github.io)
+- [ ] Apply SMOTE or cost-sensitive learning to address class imbalance and improve delay detection (Specificity)
+- [ ] Integrate real-time weather data as additional predictors
+- [ ] Explore ensemble methods (stacking, boosting) for further performance gains
+- [ ] Build a Shiny dashboard for interactive delay prediction
+
+---
+
+## 📜 References
+
+- Hastie, T., Tibshirani, R., & Friedman, J. (2009). *The Elements of Statistical Learning*. Springer.
+- Kuhn, M., & Johnson, K. (2013). *Applied Predictive Modeling*. Springer.
+- Federal Aviation Administration (FAA). (2023). *Airline On-Time Performance Data*. U.S. DOT.
+
+---
+
+## 👩‍💻 Authors
+
+**Vaishnavi Perka** — [LinkedIn](https://www.linkedin.com/in/vaishnavi-perka) · [Portfolio](https://vaishnaviperka.github.io)  
+**Hariharan Jothimani**
