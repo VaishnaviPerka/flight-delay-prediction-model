@@ -153,6 +153,7 @@ flight-delay-prediction/
 ├── README.md
 └── data/
     └── dataset_note.md     # Instructions to download BTS dataset
+    └── sample_dataset.csv  # first 1000 rows of the dataset
 ```
 
 ---
